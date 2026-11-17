@@ -1,0 +1,48 @@
+name: 묵주기도 APK 만들기
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'apk/**'
+      - '.github/workflows/build-apk.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+
+      - name: APK 빌드
+        working-directory: apk
+        run: gradle --no-daemon -Pvc=${{ github.run_number }} assembleRelease
+
+      - name: 파일 이름 정리
+        run: cp apk/app/build/outputs/apk/release/app-release.apk Rosary.apk
+
+      - name: 내려받기용 릴리스에 올리기
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release delete apk-latest --yes --cleanup-tag || true
+          gh release create apk-latest Rosary.apk \
+            --title "묵주기도 APK (최신)" \
+            --notes "폰에서 Rosary.apk 를 눌러 설치하세요. 빌드 번호 ${{ github.run_number }}"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Rosary-apk
+          path: Rosary.apk

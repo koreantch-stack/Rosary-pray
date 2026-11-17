@@ -1,0 +1,42 @@
+plugins {
+    id 'com.android.application'
+}
+
+android {
+    namespace 'kr.jayt.rosary'
+    compileSdk 34
+
+    defaultConfig {
+        applicationId 'kr.jayt.rosary'
+        minSdk 24
+        targetSdk 34
+        versionCode Integer.parseInt((project.findProperty('vc') ?: '1').toString())
+        versionName '1.0.0'
+    }
+
+    signingConfigs {
+        release {
+            storeFile file('../rosary.keystore')
+            storePassword 'rosarypray'
+            keyAlias 'rosary'
+            keyPassword 'rosarypray'
+        }
+    }
+
+    buildTypes {
+        release {
+            signingConfig signingConfigs.release
+            minifyEnabled false
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+
+    lint {
+        checkReleaseBuilds false
+        abortOnError false
+    }
+}
