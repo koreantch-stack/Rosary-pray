@@ -602,24 +602,33 @@ function render(){
 }
 
 /* ───────── 신비 안내 화면 ───────── */
-let ovTimer = null;
+let ovTimer = null, ovToken = 0;
 function showOverlay(step){
   const set = SETS[step.set];
   $("ovSet").textContent = `${set.name} ${step.d+1}단`;
   $("ovTitle").textContent = `${set.m[step.d]}을 묵상합시다.`;
   const img = $("ovImg");
+  const token = ++ovToken;
   img.classList.add("hidden");
+  img.onload = null;
+  img.removeAttribute("src");      // 이전 성화가 남아 보이지 않게 비운다
   if(settings.img){
-    resolveImg(step.set, step.d, src => { if(src){ img.src = src; img.classList.remove("hidden"); } });
+    resolveImg(step.set, step.d, src => {
+      if(!src || token !== ovToken) return;
+      // 새 그림이 다 불러와진 뒤에만 보여 준다
+      img.onload = () => { if(token === ovToken) img.classList.remove("hidden"); };
+      img.src = src;
+      if(img.complete && img.naturalWidth) img.classList.remove("hidden");
+    });
   }
   const ov = $("overlay");
   ov.classList.remove("hidden", "fade");
-  clearTimeout(ovTimer);
-  ovTimer = setTimeout(hideOverlay, 2800);
+  clearTimeout(ovTimer);   // 자동으로 닫지 않고, 화면을 눌러야 넘어간다
 }
 function hideOverlay(){
   const ov = $("overlay");
   if(ov.classList.contains("hidden")) return;
+  ovToken++;
   ov.classList.add("fade");
   clearTimeout(ovTimer);
   ovTimer = setTimeout(() => ov.classList.add("hidden"), 450);
