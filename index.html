@@ -48,7 +48,21 @@ html.fs-xlarge #rosary{height:min(31vh, calc(min(100vw, 520px) * 0.98))}
 .crossg.done rect{fill:var(--gold);opacity:.5}
 .crossg.now rect{fill:var(--gold2);opacity:1}
 #centerLabel{fill:var(--dim);font-size:28px;font-weight:700;text-anchor:middle;font-family:inherit}
-.prayer{width:100%;max-width:520px;flex:1 1 0;overflow-y:auto;text-align:center;padding:4px 4px 12px;min-height:0}
+.pwrap{width:100%;max-width:520px;flex:1 1 0;display:flex;flex-direction:column;min-height:0;--ts:1}
+.tsbar{display:flex;justify-content:flex-end;gap:6px;padding:2px 0 0;flex:none}
+.ts-btn{min-width:2.6rem;height:1.9rem;padding:0 .6rem;font:inherit;font-size:.85rem;font-weight:500;color:var(--dim);background:var(--card);border:1px solid var(--line);border-radius:1rem;cursor:pointer}
+.ts-btn:disabled{opacity:.35;cursor:default}
+.prayer{width:100%;flex:1 1 0;overflow-y:auto;text-align:center;padding:2px 4px 12px;min-height:0}
+.prayer .step-name{font-size:calc(1.35rem * var(--ts))}
+.prayer .counter{font-size:calc(1rem * var(--ts))}
+.prayer .announce{font-size:calc(1.05rem * var(--ts))}
+.prayer .text{font-size:calc(1.12rem * var(--ts))}
+body.hidetext .prayer .step-name{font-size:calc(1.8rem * var(--ts))}
+@media (min-width:600px) and (min-aspect-ratio:3/4){
+  main{flex-direction:row;align-items:stretch;gap:20px;padding:0 20px}
+  #rosary,html.fs-xlarge #rosary{flex:1 1 0;min-width:0;width:auto;max-width:none;height:auto;align-self:stretch;margin:0}
+  .pwrap{flex:1 1 0;max-width:none;min-width:0;border-left:1px solid var(--line);padding-left:20px}
+}
 .step-name{font-size:1.35rem;font-weight:700;color:var(--gold);margin:6px 0 2px}
 .counter{font-size:1rem;font-weight:500;color:var(--dim);margin-bottom:8px}
 .announce{font-size:1.05rem;font-weight:500;word-break:keep-all;line-height:1.75;margin:6px 0 12px;padding:10px 12px;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
@@ -57,7 +71,7 @@ html.fs-xlarge #rosary{height:min(31vh, calc(min(100vw, 520px) * 0.98))}
 .text.resp{white-space:pre-wrap;text-align:left;display:inline-block;max-width:100%}
 body.hidetext .text{display:none}
 body.hidetext .step-name{font-size:1.8rem;margin-top:18px}
-#next{width:100%;max-width:560px;margin:0 auto;border-top:1px solid var(--line);padding:10px 16px calc(env(safe-area-inset-bottom) + 14px);font-size:.95rem;font-weight:500;word-break:keep-all;color:var(--dim);line-height:1.65;text-align:center;cursor:pointer;flex:none}
+#next{width:100%;margin:0 auto;border-top:1px solid var(--line);padding:10px 16px calc(env(safe-area-inset-bottom) + 14px);font-size:.95rem;font-weight:500;word-break:keep-all;color:var(--dim);line-height:1.65;text-align:center;cursor:pointer;flex:none}
 #next .nd{color:var(--fg);margin-top:3px;font-size:.88em;line-height:1.45}
 
 .ov{position:fixed;inset:0;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;text-align:center;z-index:20;transition:opacity .45s}
@@ -140,9 +154,15 @@ textarea.code{display:block;width:100%;height:6.5rem;font:inherit;font-size:.78r
 
 <main id="main">
   <svg id="rosary" viewBox="0 0 340 350" preserveAspectRatio="xMidYMid meet" aria-hidden="true"></svg>
-  <div class="prayer" id="prayer"></div>
+  <div class="pwrap">
+    <div class="tsbar">
+      <button class="ts-btn" id="tsDown" aria-label="기도문 글자 작게">가−</button>
+      <button class="ts-btn" id="tsUp" aria-label="기도문 글자 크게">가+</button>
+    </div>
+    <div class="prayer" id="prayer"></div>
+    <div id="next"></div>
+  </div>
 </main>
-<div id="next"></div>
 
 <!-- 신비 안내 -->
 <div id="overlay" class="ov hidden">
@@ -306,7 +326,7 @@ const COMMONS = {
 /* ───────── 저장 ───────── */
 function load(k, d){ try{ const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; }catch(e){ return d; } }
 function save(k, v){ try{ localStorage.setItem(k, JSON.stringify(v)); }catch(e){} }
-const settings = Object.assign({hide:false, img:true, dark:false, vib:true, wake:true, fs:"large"}, load("rosary.settings", {}));
+const settings = Object.assign({hide:false, img:true, dark:false, vib:true, wake:true, fs:"large", ts:2}, load("rosary.settings", {}));
 const hist = load("rosary.hist", {});      // { "2026-11-10": ["sorrowful", ...] }
 let novena = load("rosary.novena", null);        // { start: "2026-11-10" }
 
@@ -545,6 +565,7 @@ function applyLook(){
   const h = document.documentElement;
   h.classList.toggle("fs-large", settings.fs === "large");
   h.classList.toggle("fs-xlarge", settings.fs === "xlarge");
+  applyTextSize();
   document.body.classList.toggle("dark", settings.dark);
   const tc = document.querySelector('meta[name="theme-color"]');
   if(tc) tc.setAttribute("content", settings.dark ? "#15110e" : "#fbf8f2");
@@ -930,7 +951,25 @@ document.addEventListener("visibilitychange", () => { if(document.visibilityStat
 
 /* ───────── 이벤트 ───────── */
 $("main").addEventListener("click", next);
-$("next").addEventListener("click", next);
+// 기도문 글자 크기: 기도 이름·횟수·묵상 문구·기도문만 바뀐다
+const TS = [0.8, 0.9, 1, 1.15, 1.3, 1.5, 1.75];
+function applyTextSize(){
+  let i = Number.isInteger(settings.ts) ? settings.ts : 2;
+  i = Math.max(0, Math.min(TS.length - 1, i));
+  settings.ts = i;
+  document.querySelector(".pwrap").style.setProperty("--ts", TS[i]);
+  $("tsDown").disabled = i === 0;
+  $("tsUp").disabled = i === TS.length - 1;
+}
+function stepText(d, e){
+  e.stopPropagation();
+  settings.ts = (Number.isInteger(settings.ts) ? settings.ts : 2) + d;
+  applyTextSize();
+  save("rosary.settings", settings);
+}
+$("tsDown").addEventListener("click", e => stepText(-1, e));
+$("tsUp").addEventListener("click", e => stepText(1, e));
+document.querySelector(".tsbar").addEventListener("click", e => e.stopPropagation());
 $("overlay").addEventListener("click", e => { e.stopPropagation(); hideOverlay(); });
 $("prevBtn").addEventListener("click", prev);
 $("doneHome").addEventListener("click", () => showChooser("start"));
